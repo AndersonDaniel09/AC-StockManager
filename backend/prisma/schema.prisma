@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  name           String
+  username       String   @unique
+  email          String?  @unique
+  branchId       Int?
+  password       String
+  role           String   @default("SELLER")
+  canAddProducts Boolean  @default(false)
+  canSell        Boolean  @default(false)
+  canEditProducts Boolean @default(false)
+  setupToken     String?
+  setupTokenExpiresAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  branch         Branch?  @relation(fields: [branchId], references: [id])
+  sales          Sale[]
+  credits        Credit[]
+  reviewedCustomerUpdateRequests CustomerUpdateRequest[]
+}
+
+model Branch {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  users     User[]
+  products  Product[]
+  sales     Sale[]
+  credits   Credit[]
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  imageUrl  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products  Product[]
+}
+
+model Product {
+  id          Int          @id @default(autoincrement())
+  name        String
+  imageUrl    String?
+  price       Float
+  stock       Int          @default(0)
+  categoryId  Int
+  branchId    Int?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  category    Category     @relation(fields: [categoryId], references: [id])
+  branch      Branch?      @relation(fields: [branchId], references: [id])
+  saleItems   SaleItem[]
+  creditItems CreditItem[]
+}
+
+model Sale {
+  id        Int        @id @default(autoincrement())
+  total     Float
+  sellerId  Int
+  branchId  Int?
+  createdAt DateTime   @default(now())
+
+  seller    User       @relation(fields: [sellerId], references: [id])
+  branch    Branch?    @relation(fields: [branchId], references: [id])
+  items     SaleItem[]
+}
+
+model SaleItem {
+  id        Int     @id @default(autoincrement())
+  saleId    Int
+  productId Int
+  quantity  Int
+  unitPrice Float
+
+  sale      Sale    @relation(fields: [saleId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Credit {
+  id         Int          @id @default(autoincrement())
+  note       String?
+  personName String
+  customerId Int?
+  sellerId   Int
+  branchId   Int?
+  status     String       @default("PENDING")
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  customer   Customer?    @relation(fields: [customerId], references: [id])
+  seller     User         @relation(fields: [sellerId], references: [id])
+  branch     Branch?      @relation(fields: [branchId], references: [id])
+  items      CreditItem[]
+}
+
+model Customer {
+  id         Int       @id @default(autoincrement())
+  firstName  String
+  lastName   String
+  phone      String
+  idNumber   String    @unique
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  credits    Credit[]
+  updateRequests CustomerUpdateRequest[]
+}
+
+model CustomerUpdateRequest {
+  id                Int       @id @default(autoincrement())
+  customerId        Int
+  proposedFirstName String
+  proposedLastName  String
+  proposedPhone     String
+  proposedIdNumber  String
+  status            String    @default("PENDING")
+  reviewedById      Int?
+  reviewedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  customer          Customer  @relation(fields: [customerId], references: [id])
+  reviewedBy        User?     @relation(fields: [reviewedById], references: [id])
+
+  @@index([customerId, status])
+}
+
+model CreditItem {
+  id        Int     @id @default(autoincrement())
+  creditId  Int
+  productId Int
+  quantity  Int
+  unitPrice Float
+  createdAt DateTime @default(now())
+
+  credit    Credit  @relation(fields: [creditId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}

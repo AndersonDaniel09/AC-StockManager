@@ -1,0 +1,12 @@
+{
+  "name": "ac-stockmanager",
+  "version": "1.0.0",
+  "description": "Sistema de inventario AC StockManager",
+  "scripts": {
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev",
+    "dev": "start cmd /k \"cd backend && npm run dev\" && start cmd /k \"cd frontend && npm run dev\"",
+    "migrate": "cd backend && npx prisma migrate dev",
+    "seed": "cd backend && npm run seed"
+  }
+}

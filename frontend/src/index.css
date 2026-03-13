@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@keyframes toast-in {
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes confirm-in {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.toast-enter   { animation: toast-in   0.28s cubic-bezier(0.34,1.56,0.64,1) both; }
+.confirm-enter { animation: confirm-in 0.22s ease-out both; }
+
+.ui-btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.ui-btn-primary {
+  @apply bg-blue-700 text-white hover:bg-blue-800 focus:ring-blue-400;
+}
+.ui-btn-neutral {
+  @apply bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 focus:ring-slate-300;
+}
+.ui-btn-success {
+  @apply bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400;
+}
+.ui-btn-info {
+  @apply bg-sky-600 text-white hover:bg-sky-700 focus:ring-sky-400;
+}
+.ui-btn-danger {
+  @apply bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-400;
+}
+.ui-btn-warning {
+  @apply bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-400;
+}
+
+.ui-input {
+  @apply w-full border border-slate-300 bg-white rounded-xl px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400;
+}
+
+.ui-card {
+  @apply bg-white border border-slate-300 rounded-2xl shadow;
+}
+
+.ui-modal-backdrop {
+  @apply fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-[1px];
+}
+.ui-modal-card {
+  @apply w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-2xl p-6;
+}
+
+.ui-glass-tag {
+  @apply flex items-center gap-2 rounded-full px-3 py-1 border border-white/20 bg-black/35;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+}
+
+body.dark-mode {
+  background-color: #020617;
+  color: #e2e8f0;
+}
+
+body.dark-mode .bg-slate-50,
+body.dark-mode .bg-white {
+  background-color: #0f172a !important;
+}
+
+body.dark-mode .ui-card,
+body.dark-mode .ui-modal-card {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .ui-input {
+  background-color: #0b1220 !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .border-slate-300,
+body.dark-mode .border-slate-200,
+body.dark-mode .border-slate-100 {
+  border-color: #334155 !important;
+}
+
+body.dark-mode .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+body.dark-mode .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .text-slate-700,
+body.dark-mode .text-slate-600,
+body.dark-mode .text-slate-500,
+body.dark-mode .text-slate-400 {
+  color: #94a3b8 !important;
+}
