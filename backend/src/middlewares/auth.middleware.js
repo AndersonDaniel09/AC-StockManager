@@ -24,6 +24,19 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+async function requireAdminOrCanEdit(req, res, next) {
+  if (req.user.role === 'ADMIN') return next();
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { canEditProducts: true } });
+    if (!user || !user.canEditProducts) {
+      return res.status(403).json({ message: 'No tienes permiso para gestionar usuarios' });
+    }
+    next();
+  } catch {
+    return res.status(500).json({ message: 'Error al verificar permisos' });
+  }
+}
+
 // Checks LIVE permissions from DB so revoked permissions take effect immediately
 async function requireCanEditProducts(req, res, next) {
   if (req.user.role === 'ADMIN') return next();
@@ -65,4 +78,4 @@ async function requireCanSellOrEdit(req, res, next) {
   }
 }
 
-module.exports = { authenticate, requireAdmin, requireCanEditProducts, requireCanSell, requireCanSellOrEdit };
+module.exports = { authenticate, requireAdmin, requireAdminOrCanEdit, requireCanEditProducts, requireCanSell, requireCanSellOrEdit };

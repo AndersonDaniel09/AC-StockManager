@@ -114,7 +114,24 @@ async function update(id, data) {
   });
 }
 
-async function remove(id) {
+async function remove(id, actor) {
+  const existing = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, role: true },
+  });
+
+  if (!existing) {
+    throw new Error('Usuario no encontrado');
+  }
+
+  if (existing.role === 'ADMIN') {
+    throw new Error('No se permite eliminar cuentas administradoras');
+  }
+
+  if (actor?.id === id) {
+    throw new Error('No puedes eliminar tu propia cuenta');
+  }
+
   return prisma.user.delete({ where: { id } });
 }
 

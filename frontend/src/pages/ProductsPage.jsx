@@ -31,9 +31,13 @@ export default function ProductsPage() {
       .finally(() => setLoading(false));
   }, [categoryId, user?.role]);
 
-  function handleProductSold(productId, quantitySold = 1) {
+  function handleProductSold(items = []) {
     setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, stock: Math.max(0, p.stock - quantitySold) } : p))
+      prev.map((p) => {
+        const soldItem = items.find((item) => item.productId === p.id);
+        if (!soldItem) return p;
+        return { ...p, stock: Math.max(0, p.stock - Number(soldItem.quantity || 0)) };
+      })
     );
   }
 
@@ -100,8 +104,10 @@ export default function ProductsPage() {
       {selectedProduct && (
         <SellModal
           product={selectedProduct}
+          products={products}
+          allowMultiProduct={false}
           onClose={() => setSelectedProduct(null)}
-          onSuccess={(productId, quantitySold) => handleProductSold(productId, quantitySold)}
+          onSuccess={(items) => handleProductSold(items)}
         />
       )}
     </AppLayout>

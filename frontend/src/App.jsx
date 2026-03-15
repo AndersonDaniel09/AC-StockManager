@@ -6,6 +6,7 @@ import { ConfirmProvider } from './components/ConfirmModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import CategoriesPage from './pages/CategoriesPage';
+import FreeSalePage from './pages/FreeSalePage';
 import ProductsPage from './pages/ProductsPage';
 import AdminPage from './pages/AdminPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -36,13 +37,14 @@ export default function App() {
           <Route path="/guest-register" element={<GuestRegisterPage />} />
           <Route path="/" element={<ProtectedRoute adminRedirect="/admin/dashboard"><EmployeeHomePage /></ProtectedRoute>} />
           <Route path="/sell" element={<ProtectedRoute requireSell><CategoriesPage /></ProtectedRoute>} />
+          <Route path="/sell/free" element={<ProtectedRoute requireSell><FreeSalePage /></ProtectedRoute>} />
           <Route path="/products/:categoryId" element={<ProtectedRoute requireSell><ProductsPage /></ProtectedRoute>} />
           <Route path="/credits" element={<Navigate to="/sales" replace />} />
           <Route path="/sales" element={<ProtectedRoute requireSell><SalesHistoryPage /></ProtectedRoute>} />
           <Route path="/customers" element={<ProtectedRoute requireSellOrEdit><CustomersPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute adminOnly><AdminDashboardPage /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPage /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute requireEdit><AdminPage /></ProtectedRoute>} />
           <Route path="/admin/products" element={<ProtectedRoute requireEdit><ManageProductsPage /></ProtectedRoute>} />
           <Route path="/admin/categories" element={<ProtectedRoute adminOnly><ManageCategoriesPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -30,6 +30,8 @@ model User {
   sales          Sale[]
   credits        Credit[]
   reviewedCustomerUpdateRequests CustomerUpdateRequest[]
+  requestedCustomerDeleteRequests CustomerDeleteRequest[] @relation("CustomerDeleteRequestedBy")
+  reviewedCustomerDeleteRequests CustomerDeleteRequest[] @relation("CustomerDeleteReviewedBy")
 }
 
 model Branch {
@@ -118,11 +120,17 @@ model Customer {
   lastName   String
   phone      String
   idNumber   String    @unique
+  isDeleted  Boolean   @default(false)
+  deletedAt  DateTime?
+  restoredAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
   credits    Credit[]
   updateRequests CustomerUpdateRequest[]
+  deleteRequests CustomerDeleteRequest[]
+
+  @@index([isDeleted, createdAt])
 }
 
 model CustomerUpdateRequest {
@@ -142,6 +150,24 @@ model CustomerUpdateRequest {
   reviewedBy        User?     @relation(fields: [reviewedById], references: [id])
 
   @@index([customerId, status])
+}
+
+model CustomerDeleteRequest {
+  id           Int      @id @default(autoincrement())
+  customerId   Int
+  requestedById Int
+  status       String   @default("PENDING")
+  reviewedById Int?
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  requestedBy  User     @relation("CustomerDeleteRequestedBy", fields: [requestedById], references: [id])
+  reviewedBy   User?    @relation("CustomerDeleteReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([customerId, status])
+  @@index([status, createdAt])
 }
 
 model CreditItem {

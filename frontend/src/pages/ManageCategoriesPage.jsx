@@ -6,6 +6,11 @@ import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmModal';
 
 const EMPTY_FORM = { name: '', imageUrl: '' };
+const PROTECTED_FREE_SALE_CATEGORY_NAME = 'venta de varios productos';
+
+function isProtectedCategory(category) {
+  return String(category?.name || '').trim().toLowerCase() === PROTECTED_FREE_SALE_CATEGORY_NAME;
+}
 
 function CategorySilhouette() {
   return (
@@ -23,6 +28,7 @@ export default function ManageCategoriesPage() {
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editingProtected, setEditingProtected] = useState(false);
   const { showToast } = useToast();
   const showConfirm = useConfirm();
   const navigate = useNavigate();
@@ -33,12 +39,14 @@ export default function ManageCategoriesPage() {
 
   function openCreate() {
     setEditing(null);
+    setEditingProtected(false);
     setForm(EMPTY_FORM);
     setShowForm(true);
   }
 
   function openEdit(cat) {
     setEditing(cat.id);
+    setEditingProtected(isProtectedCategory(cat));
     setForm({ name: cat.name, imageUrl: cat.imageUrl || '' });
     setShowForm(true);
   }
@@ -110,25 +118,35 @@ export default function ManageCategoriesPage() {
               <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
                 <p className="font-bold text-white text-2xl leading-tight truncate">{cat.name}</p>
 
+                {isProtectedCategory(cat) && (
+                  <span className="inline-flex mt-2 bg-slate-900/80 text-white text-[11px] font-semibold px-3 py-1 rounded-full border border-white/30">
+                    Categoría protegida
+                  </span>
+                )}
+
                 <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => navigate(`/admin/products?new=1&categoryId=${cat.id}`)}
-                    className="ui-btn ui-btn-success !px-3 !py-1.5"
-                  >
-                    Nuevo producto
-                  </button>
+                  {!isProtectedCategory(cat) && (
+                    <button
+                      onClick={() => navigate(`/admin/products?new=1&categoryId=${cat.id}`)}
+                      className="ui-btn ui-btn-success !px-3 !py-1.5"
+                    >
+                      Nuevo producto
+                    </button>
+                  )}
                   <button
                     onClick={() => openEdit(cat)}
                     className="ui-btn ui-btn-info !px-3 !py-1.5"
                   >
                     Editar
                   </button>
-                  <button
-                    onClick={() => handleDelete(cat.id)}
-                    className="ui-btn ui-btn-danger !px-3 !py-1.5"
-                  >
-                    Borrar
-                  </button>
+                  {!isProtectedCategory(cat) && (
+                    <button
+                      onClick={() => handleDelete(cat.id)}
+                      className="ui-btn ui-btn-danger !px-3 !py-1.5"
+                    >
+                      Borrar
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -148,8 +166,12 @@ export default function ManageCategoriesPage() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="ui-input"
+                disabled={editingProtected}
                 required
               />
+              {editingProtected && (
+                <p className="text-xs text-slate-500">El nombre de esta categoría está protegido. Solo puedes cambiar la imagen.</p>
+              )}
               <input
                 type="url"
                 placeholder="URL de imagen de fondo (opcional)"

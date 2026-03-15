@@ -88,10 +88,12 @@ export default function AppSidebar({ mobile = false, onNavigate, onClose }) {
             <NavLink to="/admin/categories" end className={({ isActive }) => linkClass(isActive)} onClick={handleNavigate}>
               Gestionar categorías
             </NavLink>
-            <NavLink to="/admin" end className={({ isActive }) => linkClass(isActive)} onClick={handleNavigate}>
-              Usuarios
-            </NavLink>
           </>
+        )}
+        {(user?.role === 'ADMIN' || user?.canEditProducts) && (
+          <NavLink to="/admin" end className={({ isActive }) => linkClass(isActive)} onClick={handleNavigate}>
+            Usuarios
+          </NavLink>
         )}
       </nav>
 

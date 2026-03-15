@@ -26,24 +26,38 @@ export default function AdminPage() {
   const [activeBranchId, setActiveBranchId] = useState('');
   const [newBranchName, setNewBranchName] = useState('');
   const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const navigate = useNavigate();
   const { showToast } = useToast();
   const showConfirm = useConfirm();
 
   useEffect(() => {
-    Promise.all([getUsers(), getBranches()]).then(([usersRes, branchesRes]) => {
-      setUsers(usersRes.data);
-      setBranches(branchesRes.data || []);
+    async function loadData() {
+      try {
+        if (isAdmin) {
+          const [usersRes, branchesRes] = await Promise.all([getUsers(), getBranches()]);
+          setUsers(usersRes.data);
+          setBranches(branchesRes.data || []);
 
-      const saved = localStorage.getItem('activeBranchId');
-      const defaultId = saved || String(branchesRes.data?.[0]?.id || '');
-      if (defaultId) {
-        setActiveBranchId(defaultId);
-        localStorage.setItem('activeBranchId', defaultId);
-        setNewEmployee((prev) => ({ ...prev, branchId: defaultId }));
+          const saved = localStorage.getItem('activeBranchId');
+          const defaultId = saved || String(branchesRes.data?.[0]?.id || '');
+          if (defaultId) {
+            setActiveBranchId(defaultId);
+            localStorage.setItem('activeBranchId', defaultId);
+            setNewEmployee((prev) => ({ ...prev, branchId: defaultId }));
+          }
+          return;
+        }
+
+        const usersRes = await getUsers();
+        setUsers(usersRes.data);
+      } catch (err) {
+        showToast(err.response?.data?.message || 'Error cargando usuarios', 'error');
       }
-    });
-  }, []);
+    }
+
+    loadData();
+  }, [isAdmin, showToast]);
 
   async function handleCreateBranch() {
     if (!newBranchName.trim()) return;
@@ -64,6 +78,7 @@ export default function AdminPage() {
   }
 
   async function togglePermission(u, key) {
+    if (!isAdmin) return;
     const updated = await updateUserPermissions(u.id, {
       canSell: key === 'canSell' ? !u.canSell : u.canSell,
       canEditProducts: key === 'canEditProducts' ? !u.canEditProducts : u.canEditProducts,
@@ -72,6 +87,7 @@ export default function AdminPage() {
   }
 
   async function handleCreateEmployee(e) {
+    if (!isAdmin) return;
     e.preventDefault();
     setSavingEmployee(true);
     try {
@@ -103,9 +119,13 @@ export default function AdminPage() {
       danger: true,
     });
     if (!ok) return;
-    await deleteUser(id);
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    showToast('Empleado eliminado.', 'success');
+    try {
+      await deleteUser(id);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      showToast('Empleado eliminado.', 'success');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'No se pudo eliminar el usuario', 'error');
+    }
   }
 
   function startEditUser(targetUser) {
@@ -126,6 +146,7 @@ export default function AdminPage() {
   }
 
   async function handleEditUser(e, id) {
+    if (!isAdmin) return;
     e.preventDefault();
     setSavingEditEmployee(true);
     try {
@@ -153,6 +174,7 @@ export default function AdminPage() {
   }
 
   async function toggleUserSales(userId) {
+    if (!isAdmin) return;
     if (expandedUserId === userId) {
       setExpandedUserId(null);
       return;
@@ -173,13 +195,10 @@ export default function AdminPage() {
   return (
     <AppLayout
       title="Gestión de usuarios"
-      subtitle="Administra usuarios y permisos del sistema"
-      actions={
-        <button onClick={() => navigate('/admin/dashboard')} className="ui-btn ui-btn-primary">
-          Ir al panel principal
-        </button>
-      }
+      subtitle={isAdmin ? 'Administra usuarios y permisos del sistema' : 'Elimina usuarios registrados autorizados'}
+      actions={null}
     >
+      {isAdmin && (
       <div className="ui-card p-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
         <div className="md:col-span-1">
           <label className="block text-xs font-semibold text-slate-600 mb-1">Sede activa</label>
@@ -212,7 +231,9 @@ export default function AdminPage() {
           </button>
         </div>
       </div>
+      )}
 
+      {isAdmin && (
       <div className="mb-6">
         <button
           type="button"
@@ -222,8 +243,9 @@ export default function AdminPage() {
           {showCreateEmployee ? 'Cerrar formulario' : 'Crear empleado'}
         </button>
       </div>
+      )}
 
-      {showCreateEmployee && (
+      {isAdmin && showCreateEmployee && (
         <div className="ui-card p-5 mb-6">
           <h3 className="text-xl font-bold text-slate-900 mb-1">Nuevo empleado</h3>
           <p className="text-slate-600 mb-4">El correo se guarda como dato de contacto y acceso.</p>
@@ -304,13 +326,15 @@ export default function AdminPage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <button
-          onClick={() => navigate('/admin/categories')}
-          className="rounded-2xl border border-blue-800 bg-blue-700 text-white p-5 font-bold text-left shadow hover:bg-blue-800 transition"
-        >
-          <p className="text-2xl mb-1 text-white">Categorías</p>
-          <p className="text-white/90 text-sm font-semibold">Crear y editar categorías</p>
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/admin/categories')}
+            className="rounded-2xl border border-blue-800 bg-blue-700 text-white p-5 font-bold text-left shadow hover:bg-blue-800 transition"
+          >
+            <p className="text-2xl mb-1 text-white">Categorías</p>
+            <p className="text-white/90 text-sm font-semibold">Crear y editar categorías</p>
+          </button>
+        )}
         <button
           onClick={() => navigate('/admin/products')}
           className="rounded-2xl border border-emerald-800 bg-emerald-700 text-white p-5 font-bold text-left shadow hover:bg-emerald-800 transition"
@@ -332,50 +356,62 @@ export default function AdminPage() {
               <div className="p-4 flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => u.role !== 'ADMIN' && toggleUserSales(u.id)}
+                  onClick={() => isAdmin && u.role !== 'ADMIN' && toggleUserSales(u.id)}
                   className="text-left flex-1 min-w-0"
                 >
                   <p className="font-bold text-slate-900">{u.name}</p>
                   <p className="text-slate-700 text-sm">@{u.username} · {u.role}</p>
                   {u.email && <p className="text-slate-500 text-xs">{u.email}</p>}
                   {u.branch?.name && <p className="text-slate-500 text-xs">Sede: {u.branch.name}</p>}
-                  {u.role !== 'ADMIN' && (
+                  {isAdmin && u.role !== 'ADMIN' && (
                     <p className="text-sky-600 text-xs mt-1 font-semibold">{isExpanded ? '▲ Ocultar ventas' : '▼ Ver ventas'}</p>
                   )}
                 </button>
                 {u.role !== 'ADMIN' && u.id !== user?.id && (
                   <div className="flex items-center gap-3 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => (isEditing ? cancelEditUser() : startEditUser(u))}
-                      className="text-sky-700 hover:text-sky-900 font-bold"
-                    >
-                      {isEditing ? 'Cancelar' : 'Editar'}
-                    </button>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-700 font-semibold">Vender</span>
+                    {isAdmin && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-700 font-semibold">Vender</span>
+                          <button
+                            onClick={() => togglePermission(u, 'canSell')}
+                            className={`w-12 h-6 rounded-full transition ${u.canSell ? 'bg-emerald-600' : 'bg-slate-400'}`}
+                          >
+                            <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${u.canSell ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-700 font-semibold">Editar</span>
+                          <button
+                            onClick={() => togglePermission(u, 'canEditProducts')}
+                            className={`w-12 h-6 rounded-full transition ${u.canEditProducts ? 'bg-sky-600' : 'bg-slate-400'}`}
+                          >
+                            <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${u.canEditProducts ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => (isEditing ? cancelEditUser() : startEditUser(u))}
+                          className="ui-btn ui-btn-primary !py-1 !px-3 text-xs"
+                        >
+                          {isEditing ? 'Cancelar' : 'Editar'}
+                        </button>
+                      </>
+                    )}
+                    {isAdmin && (
                       <button
-                        onClick={() => togglePermission(u, 'canSell')}
-                        className={`w-12 h-6 rounded-full transition ${u.canSell ? 'bg-emerald-600' : 'bg-slate-400'}`}
+                        type="button"
+                        onClick={() => handleDelete(u.id)}
+                        className="ui-btn ui-btn-danger !py-1 !px-3 text-xs"
                       >
-                        <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${u.canSell ? 'translate-x-6' : 'translate-x-1'}`} />
+                        Eliminar
                       </button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-700 font-semibold">Editar</span>
-                      <button
-                        onClick={() => togglePermission(u, 'canEditProducts')}
-                        className={`w-12 h-6 rounded-full transition ${u.canEditProducts ? 'bg-sky-600' : 'bg-slate-400'}`}
-                      >
-                        <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform ${u.canEditProducts ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                    </div>
-                    <button onClick={() => handleDelete(u.id)} className="text-red-700 hover:text-red-900 ml-2 font-bold">✕</button>
+                    )}
                   </div>
                 )}
               </div>
 
-              {isEditing && u.role !== 'ADMIN' && (
+              {isAdmin && isEditing && u.role !== 'ADMIN' && (
                 <div className="border-t border-slate-200 bg-slate-50 p-4">
                   <form onSubmit={(e) => handleEditUser(e, u.id)} className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input
@@ -454,7 +490,7 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {isExpanded && u.role !== 'ADMIN' && (
+              {isAdmin && isExpanded && u.role !== 'ADMIN' && (
                 <div className="border-t border-slate-200 bg-slate-50 p-4">
                   {loadingSalesFor === u.id ? (
                     <p className="text-slate-500 text-sm">Cargando ventas...</p>

@@ -29,7 +29,7 @@ async function update(req, res) {
 
 async function remove(req, res) {
   try {
-    await userService.remove(Number(req.params.id));
+    await userService.remove(Number(req.params.id), req.user);
     res.json({ message: 'Usuario eliminado' });
   } catch (error) {
     res.status(400).json({ message: error.message });

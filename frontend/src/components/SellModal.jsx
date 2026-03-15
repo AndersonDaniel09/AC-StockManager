@@ -43,12 +43,14 @@ function MicIcon({ className = 'w-5 h-5' }) {
   );
 }
 
-export default function SellModal({ product, onClose, onSuccess }) {
+export default function SellModal({ product, products = [], allowMultiProduct = false, onClose, onSuccess }) {
   const [mode, setMode] = useState(null); // 'sell' | 'credit'
   const [quantity, setQuantity] = useState(1);
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [customers, setCustomers] = useState([]);
+  const [cartItems, setCartItems] = useState([{ productId: product.id, quantity: 1 }]);
+  const [productToAdd, setProductToAdd] = useState(String(product.id));
+  const [customerIdNumber, setCustomerIdNumber] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [checkingCustomer, setCheckingCustomer] = useState(false);
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
@@ -56,6 +58,51 @@ export default function SellModal({ product, onClose, onSuccess }) {
   const recognitionRef = useRef(null);
   const { showToast } = useToast();
   const { user } = useAuth();
+
+  const productCatalog = products.length > 0 ? products.filter((item) => Number(item.stock || 0) > 0) : [product];
+
+  useEffect(() => {
+    setQuantity(1);
+    setCartItems([{ productId: product.id, quantity: 1 }]);
+    setProductToAdd(String(product.id));
+  }, [product.id]);
+
+  function getProductById(productId) {
+    return productCatalog.find((item) => item.id === Number(productId));
+  }
+
+  function getItemTotal(item) {
+    const selected = getProductById(item.productId);
+    return Number(selected?.price || 0) * Number(item.quantity || 0);
+  }
+
+  function addProductToCart() {
+    const selectedId = Number(productToAdd);
+    const selected = getProductById(selectedId);
+    if (!selected) return;
+
+    setCartItems((prev) => {
+      const existing = prev.find((item) => item.productId === selectedId);
+      if (existing) {
+        return prev.map((item) => item.productId === selectedId ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [...prev, { productId: selectedId, quantity: 1 }];
+    });
+  }
+
+  function updateCartQuantity(productId, value) {
+    setCartItems((prev) => prev.map((item) => item.productId === productId ? { ...item, quantity: value } : item));
+    if (errorDialog.open) {
+      setErrorDialog({ open: false, title: '', message: '' });
+    }
+  }
+
+  function removeFromCart(productId) {
+    setCartItems((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((item) => item.productId !== productId);
+    });
+  }
 
   function startVoiceRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -78,41 +125,80 @@ export default function SellModal({ product, onClose, onSuccess }) {
     setListening(true);
   }
 
-  useEffect(() => {
-    if (mode !== 'credit') return;
-    getCustomers(customerSearch)
-      .then((res) => setCustomers(res.data || []))
-      .catch(() => setCustomers([]));
-  }, [mode, customerSearch]);
+  async function resolveCustomerByIdNumber(idNumberInput) {
+    const normalized = String(idNumberInput || '').trim();
+    if (!normalized) {
+      setSelectedCustomer(null);
+      return null;
+    }
+
+    setCheckingCustomer(true);
+    try {
+      const res = await getCustomers(normalized);
+      const rows = res.data || [];
+      const exact = rows.find((customer) => String(customer.idNumber || '').trim() === normalized) || null;
+      setSelectedCustomer(exact);
+      return exact;
+    } catch {
+      setSelectedCustomer(null);
+      return null;
+    } finally {
+      setCheckingCustomer(false);
+    }
+  }
 
   async function handleConfirm() {
-    const qty = Number(quantity);
-    if (!Number.isInteger(qty) || qty < 1) {
-      showToast('La cantidad debe ser un número entero mayor o igual a 1', 'warning');
+    const normalizedItems = allowMultiProduct
+      ? cartItems.map((item) => ({
+          productId: Number(item.productId),
+          quantity: Number(item.quantity),
+        }))
+      : [{ productId: Number(product.id), quantity: Number(quantity) }];
+
+    if (normalizedItems.length === 0) {
+      showToast('Debes agregar al menos un producto', 'warning');
       return;
     }
 
-    if (mode === 'credit' && !selectedCustomer?.id) {
-      showToast('Debes seleccionar un cliente registrado para fiar', 'warning');
+    if (normalizedItems.some((item) => !Number.isInteger(item.quantity) || item.quantity < 1)) {
+      showToast('Todas las cantidades deben ser números enteros mayores o iguales a 1', 'warning');
       return;
+    }
+
+    let customerForCredit = selectedCustomer;
+    if (mode === 'credit') {
+      const normalizedId = String(customerIdNumber || '').trim();
+      if (!normalizedId) {
+        showToast('Debes ingresar la cédula del cliente', 'warning');
+        return;
+      }
+
+      if (!customerForCredit || String(customerForCredit.idNumber || '').trim() !== normalizedId) {
+        customerForCredit = await resolveCustomerByIdNumber(normalizedId);
+      }
+
+      if (!customerForCredit?.id) {
+        showToast('No existe un cliente registrado con esa cédula', 'warning');
+        return;
+      }
     }
 
     setLoading(true);
     try {
       if (mode === 'sell') {
         await createSale({
-          items: [{ productId: product.id, quantity: qty }],
+          items: normalizedItems,
           branchId: user?.role === 'ADMIN' ? Number(localStorage.getItem('activeBranchId') || 0) || undefined : undefined,
         });
       } else {
         await createCredit({
-          customerId: selectedCustomer.id,
+          customerId: customerForCredit.id,
           note: note.trim() || null,
-          items: [{ productId: product.id, quantity: qty }],
+          items: normalizedItems,
           branchId: user?.role === 'ADMIN' ? Number(localStorage.getItem('activeBranchId') || 0) || undefined : undefined,
         });
       }
-      onSuccess(product.id, qty);
+      onSuccess(normalizedItems);
       onClose();
     } catch (err) {
       const message = err.response?.data?.message || 'Error al procesar';
@@ -146,9 +232,59 @@ export default function SellModal({ product, onClose, onSuccess }) {
           )}
           <div>
             <p className="font-bold text-slate-900 text-2xl leading-tight">{product.name}</p>
-            <p className="text-sky-700 font-bold text-3xl mt-1">${product.price.toLocaleString()}</p>
+            <p className="text-slate-500 text-sm mt-1">Puedes agregar más productos antes de confirmar.</p>
           </div>
         </div>
+
+        {allowMultiProduct && (
+        <div className="rounded-xl border border-slate-200 p-3 mb-4 bg-slate-50">
+          <label className="block text-xs font-semibold text-slate-700 mb-1">Agregar producto</label>
+          <div className="flex gap-2">
+            <select
+              value={productToAdd}
+              onChange={(e) => setProductToAdd(e.target.value)}
+              className="ui-input"
+            >
+              {productCatalog.map((item) => (
+                <option key={item.id} value={item.id}>{item.name} · ${Number(item.price || 0).toLocaleString()}</option>
+              ))}
+            </select>
+            <button type="button" onClick={addProductToCart} className="ui-btn ui-btn-primary !py-2 whitespace-nowrap">Agregar</button>
+          </div>
+          <div className="mt-3 flex flex-col gap-2">
+            {cartItems.map((item) => {
+              const selected = getProductById(item.productId);
+              return (
+                <div key={item.productId} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <p className="text-sm font-semibold text-slate-800">{selected?.name || 'Producto'}</p>
+                    {cartItems.length > 1 && (
+                      <button type="button" onClick={() => removeFromCart(item.productId)} className="text-xs font-bold text-red-600 hover:text-red-700">Quitar</button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={item.quantity}
+                      onChange={(e) => updateCartQuantity(item.productId, e.target.value)}
+                      className="ui-input"
+                    />
+                    <p className="text-xs font-semibold text-slate-600 min-w-[110px] text-right">
+                      Total: ${getItemTotal(item).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex justify-between text-sm font-bold text-slate-800">
+            <span>Total general</span>
+            <span>${cartItems.reduce((sum, item) => sum + getItemTotal(item), 0).toLocaleString()}</span>
+          </div>
+        </div>
+        )}
 
         {/* Selección vender / fiar */}
         {!mode && (
@@ -173,26 +309,31 @@ export default function SellModal({ product, onClose, onSuccess }) {
         {/* Confirmar venta */}
         {mode === 'sell' && (
           <div>
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Cantidad a vender</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={quantity}
-                onChange={(e) => {
-                  setQuantity(e.target.value);
-                  if (errorDialog.open) {
-                    setErrorDialog({ open: false, title: '', message: '' });
-                  }
-                }}
-                className="ui-input"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                Total estimado: ${(Number(product.price || 0) * (Number(quantity) || 0)).toLocaleString()}
-              </p>
-            </div>
-            <p className="text-center text-slate-700 mb-4">¿Confirmar venta de <strong>{product.name}</strong>?</p>
+            {!allowMultiProduct && (
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Cantidad a vender</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={quantity}
+                  onChange={(e) => {
+                    setQuantity(e.target.value);
+                    if (errorDialog.open) {
+                      setErrorDialog({ open: false, title: '', message: '' });
+                    }
+                  }}
+                  className="ui-input"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Total estimado: ${(Number(product.price || 0) * (Number(quantity) || 0)).toLocaleString()}
+                </p>
+              </div>
+            )}
+
+            <p className="text-center text-slate-700 mb-4">
+              {allowMultiProduct ? '¿Confirmar venta de los productos seleccionados?' : <>¿Confirmar venta de <strong>{product.name}</strong>?</>}
+            </p>
             <div className="flex gap-3">
               <button onClick={() => setMode(null)} className="flex-1 ui-btn ui-btn-neutral !py-3">
                 Cancelar
@@ -207,54 +348,49 @@ export default function SellModal({ product, onClose, onSuccess }) {
         {/* Formulario fiar */}
         {mode === 'credit' && (
           <div className="flex flex-col gap-3">
+            {!allowMultiProduct && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Cantidad a fiar</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={quantity}
+                  onChange={(e) => {
+                    setQuantity(e.target.value);
+                    if (errorDialog.open) {
+                      setErrorDialog({ open: false, title: '', message: '' });
+                    }
+                  }}
+                  className="ui-input"
+                />
+              </div>
+            )}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Cantidad a fiar</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={quantity}
-                onChange={(e) => {
-                  setQuantity(e.target.value);
-                  if (errorDialog.open) {
-                    setErrorDialog({ open: false, title: '', message: '' });
-                  }
-                }}
-                className="ui-input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Cliente (nombre o cédula)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Cédula del cliente</label>
               <input
                 type="text"
-                placeholder="Buscar por nombre o cédula"
-                value={customerSearch}
+                placeholder="Ingresa la cédula"
+                value={customerIdNumber}
                 onChange={(e) => {
-                  setCustomerSearch(e.target.value);
+                  setCustomerIdNumber(e.target.value);
                   setSelectedCustomer(null);
+                }}
+                onBlur={() => {
+                  const normalized = String(customerIdNumber || '').trim();
+                  if (!normalized) return;
+                  resolveCustomerByIdNumber(normalized);
                 }}
                 className="ui-input"
               />
-              <div className="mt-2 max-h-36 overflow-y-auto border border-slate-200 rounded-xl">
-                {customers.length === 0 ? (
-                  <p className="text-xs text-slate-500 p-3">No se encontraron clientes.</p>
-                ) : (
-                  customers.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCustomer(c);
-                        setCustomerSearch(`${c.firstName} ${c.lastName} · ${c.idNumber}`);
-                      }}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0"
-                    >
-                      <p className="text-sm font-semibold text-slate-800">{c.firstName} {c.lastName}</p>
-                      <p className="text-xs text-slate-500">Cédula: {c.idNumber} · Cel: {c.phone}</p>
-                    </button>
-                  ))
-                )}
-              </div>
+              {checkingCustomer && (
+                <p className="text-xs text-slate-500 mt-2">Verificando cliente...</p>
+              )}
+              {!checkingCustomer && selectedCustomer?.id && (
+                <p className="text-xs text-emerald-700 mt-2 font-semibold">
+                  Cliente encontrado: {selectedCustomer.firstName} {selectedCustomer.lastName}
+                </p>
+              )}
             </div>
             <div className="relative">
               <textarea
