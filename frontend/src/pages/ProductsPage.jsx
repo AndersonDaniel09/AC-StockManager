@@ -56,13 +56,13 @@ export default function ProductsPage() {
       ) : products.length === 0 ? (
         <p className="text-slate-700 font-medium">No hay productos en esta categoría.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 place-items-start">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
           {products.map((product) => (
             <button
               key={product.id}
               onClick={() => setSelectedProduct(product)}
               disabled={product.stock === 0}
-              className={`relative rounded-2xl overflow-hidden w-full max-w-[250px] aspect-[3/4] border border-slate-300 shadow text-left transition ${
+              className={`relative rounded-2xl overflow-hidden w-full aspect-[3/4] border border-slate-300 shadow text-left transition ${
                 product.stock === 0 ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-0.5 hover:shadow-lg'
               }`}
               style={{
@@ -80,7 +80,7 @@ export default function ProductsPage() {
               </div>
 
               <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                <p className="font-bold text-white text-2xl leading-tight">{product.name}</p>
+                <p className="font-bold text-white text-xl sm:text-2xl leading-tight break-words">{product.name}</p>
                 <p className="text-cyan-300 font-extrabold text-lg mt-1">${product.price.toLocaleString()}</p>
                 <div className="mt-2 flex items-center gap-2 flex-wrap">
                   <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${

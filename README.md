@@ -2,6 +2,18 @@
 
 Sistema web de inventario y ventas con control de usuarios, clientes y fiados.
 
+## Novedades recientes (Mar 2026)
+
+- Módulo **Cobro de fiados** renovado en `Historial de productos` con 3 vistas:
+	- **Fiados por cobrar**
+	- **Historial productos vendidos**
+	- **Historial fiados pagados**
+- Búsqueda en fiados por **cédula o nombre** del cliente.
+- Vista de fiados por cobrar en formato de **mini-facturas tipo nota** con acciones rápidas:
+	- **Ver** (factura completa)
+	- **Pagar**
+- Flujo de ventas de varios productos mejorado (`/sell/free`) y ajustes de UX para uso móvil.
+
 ## Stack
 
 - **Frontend:** React + Vite + Tailwind CSS

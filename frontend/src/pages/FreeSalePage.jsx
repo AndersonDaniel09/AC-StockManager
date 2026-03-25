@@ -49,9 +49,6 @@ export default function FreeSalePage() {
         const rows = categoriesRes.data || [];
         setCategories(rows);
         setProducts(productsRes.data || []);
-        if (rows.length > 0) {
-          setSelectedCategoryId(rows[0].id);
-        }
       })
       .finally(() => setLoading(false));
   }, [user?.role]);
@@ -87,6 +84,11 @@ export default function FreeSalePage() {
     [categories]
   );
 
+  const selectedCategory = useMemo(
+    () => mainCategories.find((category) => category.id === selectedCategoryId) || null,
+    [mainCategories, selectedCategoryId]
+  );
+
   function addToCart(product) {
     if (!product || Number(product.stock || 0) <= 0) return;
 
@@ -104,16 +106,20 @@ export default function FreeSalePage() {
     });
   }
 
-  function updateCartQuantity(productId, quantityValue) {
-    const product = products.find((row) => row.id === productId);
-    if (!product) return;
+  function getCartQuantity(productId) {
+    const item = cartItems.find((row) => row.productId === productId);
+    return Number(item?.quantity || 0);
+  }
 
-    const parsed = Number(quantityValue);
-    const clamped = Number.isFinite(parsed)
-      ? Math.min(Math.max(Math.floor(parsed), 1), Number(product.stock || 0))
-      : 1;
-
-    setCartItems((prev) => prev.map((item) => item.productId === productId ? { ...item, quantity: clamped } : item));
+  function decreaseCartQuantity(productId) {
+    setCartItems((prev) => {
+      const existing = prev.find((item) => item.productId === productId);
+      if (!existing) return prev;
+      if (Number(existing.quantity || 0) <= 1) {
+        return prev.filter((item) => item.productId !== productId);
+      }
+      return prev.map((item) => item.productId === productId ? { ...item, quantity: Number(item.quantity || 0) - 1 } : item);
+    });
   }
 
   function removeFromCart(productId) {
@@ -236,16 +242,6 @@ export default function FreeSalePage() {
     }
   }
 
-  function handleProductSold(items = []) {
-    setProducts((prev) =>
-      prev.map((p) => {
-        const soldItem = items.find((item) => item.productId === p.id);
-        if (!soldItem) return p;
-        return { ...p, stock: Math.max(0, p.stock - Number(soldItem.quantity || 0)) };
-      })
-    );
-  }
-
   return (
     <AppLayout
       title="Venta de varios productos"
@@ -260,84 +256,146 @@ export default function FreeSalePage() {
         <p className="text-slate-700 font-medium">Cargando productos...</p>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-5">
+          <div className={`grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-5 ${cartDetailed.length > 0 ? 'pb-24 lg:pb-0' : ''}`}>
             <div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-5">
-                {mainCategories.map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => setSelectedCategoryId(category.id)}
-                    className={`relative rounded-2xl overflow-hidden h-36 border text-left transition hover:-translate-y-0.5 hover:shadow-lg ${
-                      selectedCategoryId === category.id ? 'border-sky-400 shadow-lg' : 'border-slate-300 shadow'
-                    }`}
-                    style={{
-                      backgroundImage: category.imageUrl ? `url(${category.imageUrl})` : undefined,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                    }}
-                  >
-                    {!category.imageUrl && <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" />}
-                    <div className="absolute inset-0 bg-black/40" />
-                    <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
-                      <p className="text-white text-lg font-bold">{category.name}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {filteredProducts.length === 0 ? (
-                <p className="text-slate-700 font-medium">No hay productos en esta categoría.</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 place-items-start">
-                  {filteredProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className={`relative rounded-2xl overflow-hidden w-full max-w-[250px] aspect-[3/4] border border-slate-300 shadow text-left transition ${
-                        product.stock === 0 ? 'opacity-70' : 'hover:-translate-y-0.5 hover:shadow-lg'
-                      }`}
-                      style={{
-                        backgroundImage: product.imageUrl ? `url(${product.imageUrl})` : undefined,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                      }}
-                    >
-                      {!product.imageUrl && <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" />}
-                      <div className="absolute inset-0 bg-black/40" />
-
-                      <div className="absolute top-3 left-3 ui-glass-tag">
-                        <ProductSilhouette />
-                        <span className="text-white text-xs font-semibold tracking-wide">{product.category?.name || 'Producto'}</span>
-                      </div>
-
-                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                        <p className="font-bold text-white text-2xl leading-tight">{product.name}</p>
-                        <p className="text-cyan-300 font-extrabold text-lg mt-1">${product.price.toLocaleString()}</p>
-                        <div className="mt-2 flex items-center gap-2 flex-wrap">
-                          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                            product.stock <= 3 ? 'bg-rose-600/95 text-white' : 'bg-emerald-600/95 text-white'
-                          }`}>
-                            Stock: {product.stock}
-                          </span>
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                            product.stock === 0 ? 'bg-slate-500/95 text-white' : 'bg-sky-600/95 text-white'
-                          }`}>
-                            {product.stock === 0 ? 'Sin stock' : 'Disponible'}
-                          </span>
+              {!selectedCategoryId ? (
+                <>
+                  <div className="ui-card p-4 mb-4">
+                    <p className="text-sm font-semibold text-slate-700">Paso 1: Elige una categoría</p>
+                    <p className="text-xs text-slate-500 mt-1">Luego verás solo los productos de esa categoría y podrás volver para elegir otra.</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-5">
+                    {mainCategories.map((category) => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => setSelectedCategoryId(category.id)}
+                        className="relative rounded-2xl overflow-hidden h-36 border border-slate-300 shadow text-left transition hover:-translate-y-0.5 hover:shadow-lg"
+                        style={{
+                          backgroundImage: category.imageUrl ? `url(${category.imageUrl})` : undefined,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                        }}
+                      >
+                        {!category.imageUrl && <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" />}
+                        <div className="absolute inset-0 bg-black/40" />
+                        <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
+                          <p className="text-white text-lg font-bold">{category.name}</p>
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => addToCart(product)}
-                          disabled={product.stock === 0}
-                          className={`mt-3 ui-btn w-full !py-2 ${product.stock === 0 ? 'ui-btn-neutral' : 'ui-btn-primary'}`}
-                        >
-                          {product.stock === 0 ? 'Sin stock' : 'Agregar'}
-                        </button>
-                      </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="ui-card p-4 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Paso 2: Selecciona productos</p>
+                      <p className="text-lg font-extrabold text-slate-900 leading-tight">Categoría: {selectedCategory?.name || '—'}</p>
                     </div>
-                  ))}
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategoryId(null)}
+                      className="ui-btn ui-btn-neutral"
+                    >
+                      Ver otras categorías
+                    </button>
+                  </div>
+
+                  {filteredProducts.length === 0 ? (
+                    <p className="text-slate-700 font-medium">No hay productos en esta categoría.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                      {filteredProducts.map((product) => (
+                        <div
+                          key={product.id}
+                          onClick={() => {
+                            if (product.stock === 0) return;
+                            addToCart(product);
+                          }}
+                          className={`relative rounded-2xl overflow-hidden w-full aspect-[3/4] border border-slate-300 shadow text-left transition ${
+                            product.stock === 0 ? 'opacity-70' : 'cursor-pointer hover:-translate-y-0.5 hover:shadow-lg'
+                          }`}
+                          style={{
+                            backgroundImage: product.imageUrl ? `url(${product.imageUrl})` : undefined,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                          }}
+                        >
+                          {!product.imageUrl && <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" />}
+                          <div className="absolute inset-0 bg-black/40" />
+
+                          <div className="absolute top-3 left-3 ui-glass-tag">
+                            <ProductSilhouette />
+                            <span className="text-white text-xs font-semibold tracking-wide">{product.category?.name || 'Producto'}</span>
+                          </div>
+
+                          {getCartQuantity(product.id) > 0 && (
+                            <span className="absolute top-3 right-3 inline-flex items-center justify-center min-w-8 h-8 rounded-full bg-sky-600 text-white text-sm font-extrabold px-2 border border-sky-400/70">
+                              {getCartQuantity(product.id)}
+                            </span>
+                          )}
+
+                          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                            <p className="font-bold text-white text-xl sm:text-2xl leading-tight break-words">{product.name}</p>
+                            <p className="text-cyan-300 font-extrabold text-lg mt-1">${product.price.toLocaleString()}</p>
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                                product.stock <= 3 ? 'bg-rose-600/95 text-white' : 'bg-emerald-600/95 text-white'
+                              }`}>
+                                Stock: {product.stock}
+                              </span>
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                product.stock === 0 ? 'bg-slate-500/95 text-white' : 'bg-sky-600/95 text-white'
+                              }`}>
+                                {product.stock === 0 ? 'Sin stock' : 'Disponible'}
+                              </span>
+                            </div>
+
+                            {product.stock === 0 ? (
+                              <button
+                                type="button"
+                                disabled
+                                className="mt-3 ui-btn w-full !py-2 ui-btn-neutral"
+                              >
+                                Sin stock
+                              </button>
+                            ) : (
+                              <>
+                                <div className="mt-3 grid grid-cols-3 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      decreaseCartQuantity(product.id);
+                                    }}
+                                    className="ui-btn ui-btn-neutral !py-2"
+                                  >
+                                    -
+                                  </button>
+                                  <div className="rounded-xl bg-white/90 text-slate-900 text-center font-bold flex items-center justify-center">
+                                    {getCartQuantity(product.id)}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      addToCart(product);
+                                    }}
+                                    className="ui-btn ui-btn-primary !py-2"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                <p className="mt-2 text-[11px] text-white/85 font-semibold">Toca la imagen para agregar rápido</p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -367,15 +425,22 @@ export default function FreeSalePage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="1"
-                          max={item.product.stock}
-                          value={item.quantity}
-                          onChange={(e) => updateCartQuantity(item.productId, e.target.value)}
-                          className="ui-input"
-                        />
-                        <span className="text-xs font-semibold text-slate-600 min-w-[120px] text-right">
+                        <button
+                          type="button"
+                          onClick={() => decreaseCartQuantity(item.productId)}
+                          className="ui-btn ui-btn-neutral !py-1 !px-3"
+                        >
+                          -
+                        </button>
+                        <span className="text-sm font-bold text-slate-800 min-w-8 text-center">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => addToCart(item.product)}
+                          className="ui-btn ui-btn-primary !py-1 !px-3"
+                        >
+                          +
+                        </button>
+                        <span className="text-xs font-semibold text-slate-600 text-right flex-1 min-w-0">
                           {currency(item.subtotal)}
                         </span>
                       </div>
@@ -400,6 +465,24 @@ export default function FreeSalePage() {
             </div>
           </div>
 
+          {cartDetailed.length > 0 && (
+            <div className="lg:hidden fixed bottom-3 left-3 right-3 z-40">
+              <div className="rounded-2xl border border-slate-200 bg-white/95 backdrop-blur shadow-2xl px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-500">{cartDetailed.length} producto{cartDetailed.length === 1 ? '' : 's'} en carrito</p>
+                  <p className="text-lg font-extrabold text-sky-700 truncate">{currency(cartTotal)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openCheckout}
+                  className="ui-btn ui-btn-primary !py-2.5 whitespace-nowrap"
+                >
+                  Finalizar
+                </button>
+              </div>
+            </div>
+          )}
+
           {showCheckout && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
               <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-2xl">
@@ -410,7 +493,7 @@ export default function FreeSalePage() {
 
                 <div className="p-6">
                   {!checkoutMode ? (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setCheckoutMode('sell')}
@@ -431,7 +514,7 @@ export default function FreeSalePage() {
                       <p className="text-slate-800 font-semibold text-center">
                         Debes cobrar al cliente: <span className="text-2xl font-extrabold text-emerald-700">{currency(cartTotal)}</span>
                       </p>
-                      <div className="mt-5 flex gap-2">
+                      <div className="mt-5 flex flex-col sm:flex-row gap-2">
                         <button type="button" onClick={() => setCheckoutMode(null)} className="ui-btn ui-btn-neutral flex-1">
                           Volver
                         </button>
@@ -480,7 +563,7 @@ export default function FreeSalePage() {
                         className="ui-input resize-none"
                       />
 
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <button type="button" onClick={() => setCheckoutMode(null)} className="ui-btn ui-btn-neutral flex-1">
                           Volver
                         </button>

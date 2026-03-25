@@ -81,7 +81,7 @@ function ToastItem({ toast, onRemove }) {
   const Icon = t.icon;
   return (
     <div
-      className={`relative flex items-start gap-3 bg-white border ${t.border} rounded-2xl shadow-xl px-4 pt-4 pb-3 min-w-[300px] max-w-[400px] overflow-hidden toast-enter`}
+      className={`relative flex items-start gap-3 bg-white border ${t.border} rounded-2xl shadow-xl px-4 pt-4 pb-3 w-full overflow-hidden toast-enter`}
     >
       {/* colored top bar */}
       <div className={`absolute top-0 left-0 right-0 h-1 ${t.bar} rounded-t-2xl`} />
@@ -110,7 +110,7 @@ function ToastItem({ toast, onRemove }) {
 
 function ToastContainer({ toasts, onRemove }) {
   return (
-    <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed top-4 right-3 left-3 sm:top-5 sm:right-5 sm:left-auto z-[9999] flex flex-col gap-2 pointer-events-none sm:w-auto sm:max-w-[400px]">
       {toasts.map((t) => (
         <div key={t.id} className="pointer-events-auto">
           <ToastItem toast={t} onRemove={onRemove} />

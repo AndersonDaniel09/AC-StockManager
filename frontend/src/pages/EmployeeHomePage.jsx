@@ -164,25 +164,25 @@ export default function EmployeeHomePage() {
             <p className="text-slate-500 font-medium mb-6">Cargando estadísticas...</p>
           ) : (
             <>
-              <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
                 <div className="ui-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Ventas hoy</p>
-                  <p className="text-3xl font-extrabold text-slate-900 mt-1">{todaySales.length}</p>
+                  <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">{todaySales.length}</p>
                   <p className="text-sm font-semibold text-emerald-700 mt-1">{currency(todayRevenue)}</p>
                 </div>
                 <div className="ui-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Esta semana</p>
-                  <p className="text-3xl font-extrabold text-sky-700 mt-1">{weekSales.length}</p>
+                  <p className="text-2xl sm:text-3xl font-extrabold text-sky-700 mt-1">{weekSales.length}</p>
                   <p className="text-sm font-semibold text-sky-600 mt-1">{currency(weekRevenue)}</p>
                 </div>
                 <div className="ui-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total ventas</p>
-                  <p className="text-3xl font-extrabold text-violet-700 mt-1">{mySales.length}</p>
+                  <p className="text-2xl sm:text-3xl font-extrabold text-violet-700 mt-1">{mySales.length}</p>
                   <p className="text-xs text-slate-400 mt-1">desde el inicio</p>
                 </div>
                 <div className="ui-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Fiados pendientes</p>
-                  <p className="text-3xl font-extrabold text-amber-700 mt-1">{pendingCredits.length}</p>
+                  <p className="text-2xl sm:text-3xl font-extrabold text-amber-700 mt-1">{pendingCredits.length}</p>
                   <p className="text-sm font-semibold text-amber-600 mt-1">{currency(pendingAmount)}</p>
                 </div>
               </div>
@@ -197,7 +197,7 @@ export default function EmployeeHomePage() {
                     {recentSales.map((sale) => {
                       const items = (sale.items || []).map((i) => `${i.product?.name || 'Producto'} ×${i.quantity}`).join(', ');
                       return (
-                        <div key={sale.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 gap-3">
+                        <div key={sale.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-100 last:border-0 gap-2 sm:gap-3">
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-slate-800 truncate">{items || `Venta #${sale.id}`}</p>
                             <p className="text-xs text-slate-400">{new Date(sale.createdAt).toLocaleString('es-CO')}</p>

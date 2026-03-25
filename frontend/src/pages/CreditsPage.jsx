@@ -37,6 +37,7 @@ function groupItemsAsMiniInvoices(credit) {
 export default function CreditsPage() {
   const [credits, setCredits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [idNumberQuery, setIdNumberQuery] = useState('');
   const showConfirm = useConfirm();
   const { user } = useAuth();
 
@@ -57,7 +58,19 @@ export default function CreditsPage() {
     setCredits((prev) => prev.map((c) => (c.id === credit.id ? res.data : c)));
   }
 
-  const filtered = credits.filter((c) => c.status === 'PENDING');
+  const normalizedSearchQuery = idNumberQuery.trim().toLowerCase();
+
+  const filtered = credits.filter((c) => {
+    if (c.status !== 'PENDING') return false;
+    if (!normalizedSearchQuery) return true;
+
+    const customerIdNumber = String(c.customer?.idNumber || '').trim().toLowerCase();
+    const customerName = String(c.personName || `${c.customer?.firstName || ''} ${c.customer?.lastName || ''}`)
+      .trim()
+      .toLowerCase();
+
+    return customerIdNumber.includes(normalizedSearchQuery) || customerName.includes(normalizedSearchQuery);
+  });
 
   const totalPending = credits
     .filter((c) => c.status === 'PENDING')
@@ -67,7 +80,19 @@ export default function CreditsPage() {
     <AppLayout title="Fiados" subtitle="Controla deudas pendientes y pagos">
       <div className="bg-amber-500 rounded-2xl p-5 mb-5 text-white shadow-md border border-amber-600">
         <p className="text-sm font-semibold">Total pendiente por cobrar</p>
-        <p className="text-4xl font-extrabold">${totalPending.toLocaleString()}</p>
+        <p className="text-3xl sm:text-4xl font-extrabold break-words">${totalPending.toLocaleString()}</p>
+      </div>
+
+      <div className="ui-card p-4 mb-5">
+        <label className="block text-sm font-semibold text-slate-700 mb-2">Buscar cliente por cédula o nombre</label>
+        <input
+          type="text"
+          value={idNumberQuery}
+          onChange={(e) => setIdNumberQuery(e.target.value)}
+          placeholder="Ej: 1234567890 o Juan Pérez"
+          className="ui-input"
+          inputMode="search"
+        />
       </div>
 
       {loading ? (
@@ -80,7 +105,7 @@ export default function CreditsPage() {
             const total = credit.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
             const miniInvoices = groupItemsAsMiniInvoices(credit);
             return (
-              <div key={credit.id} className="ui-card p-5 border-l-4 border-l-amber-400 max-w-md w-full min-h-[420px] flex flex-col">
+              <div key={credit.id} className="ui-card p-5 border-l-4 border-l-amber-400 w-full flex flex-col">
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div>
                     <div className="flex flex-wrap gap-2 mb-3">

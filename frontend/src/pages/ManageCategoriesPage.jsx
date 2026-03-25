@@ -8,6 +8,15 @@ import { useConfirm } from '../components/ConfirmModal';
 const EMPTY_FORM = { name: '', imageUrl: '' };
 const PROTECTED_FREE_SALE_CATEGORY_NAME = 'venta de varios productos';
 
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen seleccionada'));
+    reader.readAsDataURL(file);
+  });
+}
+
 function isProtectedCategory(category) {
   return String(category?.name || '').trim().toLowerCase() === PROTECTED_FREE_SALE_CATEGORY_NAME;
 }
@@ -81,6 +90,26 @@ export default function ManageCategoriesPage() {
     await deleteCategory(id);
     setCategories((prev) => prev.filter((c) => c.id !== id));
     showToast('Categoría eliminada.', 'success');
+  }
+
+  async function handleImageFileChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      showToast('La imagen es muy pesada. Usa una menor a 3MB.', 'warning');
+      event.target.value = '';
+      return;
+    }
+
+    try {
+      const imageUrl = await fileToDataUrl(file);
+      setForm((prev) => ({ ...prev, imageUrl }));
+    } catch (error) {
+      showToast(error.message || 'No se pudo cargar la imagen', 'error');
+    } finally {
+      event.target.value = '';
+    }
   }
 
   return (
@@ -179,8 +208,26 @@ export default function ManageCategoriesPage() {
                 onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
                 className="ui-input"
               />
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-semibold text-slate-600 mb-2">O cargar imagen desde tu computador</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileChange}
+                  className="ui-input"
+                />
+              </div>
               {form.imageUrl && (
-                <img src={form.imageUrl} alt="preview" className="w-full h-32 object-cover rounded-xl" onError={(e) => e.target.style.display='none'} />
+                <div className="rounded-xl border border-slate-200 p-2">
+                  <img src={form.imageUrl} alt="preview" className="w-full h-32 object-cover rounded-xl" onError={(e) => e.target.style.display='none'} />
+                  <button
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, imageUrl: '' }))}
+                    className="mt-2 ui-btn ui-btn-neutral !py-1.5 !px-3"
+                  >
+                    Quitar imagen
+                  </button>
+                </div>
               )}
               <div className="flex gap-3 mt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 ui-btn ui-btn-neutral !py-3">

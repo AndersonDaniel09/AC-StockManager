@@ -71,7 +71,7 @@ export default function CategoriesPage() {
               <span className="text-white text-xs font-semibold tracking-wide">Venta especial</span>
             </div>
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/75 to-transparent">
-              <p className="text-white text-xl font-bold tracking-wide">Venta de varios productos</p>
+              <p className="text-white text-lg sm:text-xl font-bold tracking-wide break-words">Venta de varios productos</p>
               <span className="inline-flex mt-2 bg-sky-500/90 text-white text-xs font-semibold px-3 py-1 rounded-full">
                 Diferentes categorías
               </span>
@@ -100,7 +100,7 @@ export default function CategoriesPage() {
                     <span className="text-white text-xs font-semibold tracking-wide">Categoría</span>
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/75 to-transparent">
-                    <p className="text-white text-xl font-bold tracking-wide">{cat.name}</p>
+                    <p className="text-white text-lg sm:text-xl font-bold tracking-wide break-words">{cat.name}</p>
                     <span className={`inline-flex mt-2 ${palette.chip} text-white text-xs font-semibold px-3 py-1 rounded-full`}>
                       Ver productos
                     </span>

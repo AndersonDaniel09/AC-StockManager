@@ -218,7 +218,7 @@ export default function AdminPage() {
             ))}
           </select>
         </div>
-        <div className="md:col-span-2 flex gap-2">
+        <div className="md:col-span-2 flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             placeholder="Nueva sede (ej: Hotel SFR 2)"
@@ -226,7 +226,7 @@ export default function AdminPage() {
             onChange={(e) => setNewBranchName(e.target.value)}
             className="ui-input"
           />
-          <button type="button" onClick={handleCreateBranch} className="ui-btn ui-btn-primary whitespace-nowrap">
+          <button type="button" onClick={handleCreateBranch} className="ui-btn ui-btn-primary whitespace-nowrap sm:self-auto self-start">
             Crear sede
           </button>
         </div>
@@ -353,7 +353,7 @@ export default function AdminPage() {
           const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0);
           return (
             <div key={u.id} className="ui-card overflow-hidden">
-              <div className="p-4 flex items-center justify-between gap-3">
+              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => isAdmin && u.role !== 'ADMIN' && toggleUserSales(u.id)}
@@ -368,7 +368,7 @@ export default function AdminPage() {
                   )}
                 </button>
                 {u.role !== 'ADMIN' && u.id !== user?.id && (
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                     {isAdmin && (
                       <>
                         <div className="flex items-center gap-2">
@@ -470,7 +470,7 @@ export default function AdminPage() {
                       </button>
                     </div>
 
-                    <div className="md:col-span-2 flex gap-2">
+                    <div className="md:col-span-2 flex flex-wrap gap-2">
                       <button
                         type="submit"
                         disabled={savingEditEmployee}
@@ -498,7 +498,7 @@ export default function AdminPage() {
                     <p className="text-slate-500 text-sm">Este empleado no ha realizado ventas aún.</p>
                   ) : (
                     <>
-                      <div className="flex gap-6 mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                         <div className="ui-card rounded-xl px-4 py-3 text-center">
                           <p className="text-2xl font-bold text-slate-900">{sales.length}</p>
                           <p className="text-xs text-slate-500">Ventas realizadas</p>

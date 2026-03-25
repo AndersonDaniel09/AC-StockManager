@@ -104,6 +104,26 @@ export default function SellModal({ product, products = [], allowMultiProduct = 
     });
   }
 
+  const maxSingleQuantity = Math.max(1, Number(product?.stock || 1));
+
+  function setSingleQuantity(nextQuantity) {
+    const parsed = Number(nextQuantity);
+    const normalized = Number.isFinite(parsed) ? Math.floor(parsed) : 1;
+    const clamped = Math.min(Math.max(normalized, 1), maxSingleQuantity);
+    setQuantity(clamped);
+    if (errorDialog.open) {
+      setErrorDialog({ open: false, title: '', message: '' });
+    }
+  }
+
+  function increaseSingleQuantity() {
+    setSingleQuantity(Number(quantity || 1) + 1);
+  }
+
+  function decreaseSingleQuantity() {
+    setSingleQuantity(Number(quantity || 1) - 1);
+  }
+
   function startVoiceRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -312,21 +332,27 @@ export default function SellModal({ product, products = [], allowMultiProduct = 
             {!allowMultiProduct && (
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Cantidad a vender</label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={quantity}
-                  onChange={(e) => {
-                    setQuantity(e.target.value);
-                    if (errorDialog.open) {
-                      setErrorDialog({ open: false, title: '', message: '' });
-                    }
-                  }}
-                  className="ui-input"
-                />
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={decreaseSingleQuantity}
+                    className="ui-btn ui-btn-neutral !py-2"
+                  >
+                    -
+                  </button>
+                  <div className="rounded-xl border border-slate-300 bg-white text-slate-900 text-center font-bold flex items-center justify-center">
+                    {Number(quantity) || 1}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={increaseSingleQuantity}
+                    className="ui-btn ui-btn-primary !py-2"
+                  >
+                    +
+                  </button>
+                </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Total estimado: ${(Number(product.price || 0) * (Number(quantity) || 0)).toLocaleString()}
+                  Total estimado: ${(Number(product.price || 0) * (Number(quantity) || 1)).toLocaleString()}
                 </p>
               </div>
             )}
@@ -351,19 +377,25 @@ export default function SellModal({ product, products = [], allowMultiProduct = 
             {!allowMultiProduct && (
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Cantidad a fiar</label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={quantity}
-                  onChange={(e) => {
-                    setQuantity(e.target.value);
-                    if (errorDialog.open) {
-                      setErrorDialog({ open: false, title: '', message: '' });
-                    }
-                  }}
-                  className="ui-input"
-                />
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={decreaseSingleQuantity}
+                    className="ui-btn ui-btn-neutral !py-2"
+                  >
+                    -
+                  </button>
+                  <div className="rounded-xl border border-slate-300 bg-white text-slate-900 text-center font-bold flex items-center justify-center">
+                    {Number(quantity) || 1}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={increaseSingleQuantity}
+                    className="ui-btn ui-btn-primary !py-2"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             )}
             <div>
